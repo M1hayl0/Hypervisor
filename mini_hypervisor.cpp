@@ -70,19 +70,19 @@ int init_vm(struct vm *vm, long mem_size, long page_size) {
     vm->page_size = page_size;
 
     vm->kvm_fd = open("/dev/kvm", O_RDWR);
-    if (vm->kvm_fd < 0) {
+    if(vm->kvm_fd < 0) {
         perror("open /dev/kvm");
         return -1;
     }
 
     vm->vm_fd = ioctl(vm->kvm_fd, KVM_CREATE_VM, 0);
-    if (vm->vm_fd < 0) {
+    if(vm->vm_fd < 0) {
         perror("KVM_CREATE_VM");
         return -1;
     }
 
     vm->mem = (char*)mmap(NULL, mem_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    if (vm->mem == MAP_FAILED) {
+    if(vm->mem == MAP_FAILED) {
         perror("mmap mem");
         return -1;
     }
@@ -92,25 +92,25 @@ int init_vm(struct vm *vm, long mem_size, long page_size) {
     region.guest_phys_addr = 0;
     region.memory_size = mem_size;
     region.userspace_addr = (unsigned long)vm->mem;
-    if (ioctl(vm->vm_fd, KVM_SET_USER_MEMORY_REGION, &region) < 0) {
+    if(ioctl(vm->vm_fd, KVM_SET_USER_MEMORY_REGION, &region) < 0) {
         perror("KVM_SET_USER_MEMORY_REGION");
         return -1;
     }
 
     vm->vcpu_fd = ioctl(vm->vm_fd, KVM_CREATE_VCPU, 0);
-    if (vm->vcpu_fd < 0) {
+    if(vm->vcpu_fd < 0) {
         perror("KVM_CREATE_VCPU");
         return -1;
     }
 
     kvm_run_mmap_size = ioctl(vm->kvm_fd, KVM_GET_VCPU_MMAP_SIZE, 0);
-    if (kvm_run_mmap_size <= 0) {
+    if(kvm_run_mmap_size <= 0) {
         perror("KVM_GET_VCPU_MMAP_SIZE");
         return -1;
     }
 
     vm->kvm_run = (struct kvm_run*)mmap(NULL, kvm_run_mmap_size, PROT_READ | PROT_WRITE, MAP_SHARED, vm->vcpu_fd, 0);
-    if (vm->kvm_run == MAP_FAILED) {
+    if(vm->kvm_run == MAP_FAILED) {
         perror("mmap kvm_run");
         return -1;
     }
@@ -192,7 +192,7 @@ vector<string> split(const string& str, char delimiter) {
     string token;
     istringstream tokenStream(str);
     
-    while (getline(tokenStream, token, delimiter)) {
+    while(getline(tokenStream, token, delimiter)) {
         tokens.push_back(token);
     }
     
@@ -210,8 +210,7 @@ void pushFileHandleToQueue(FILE *file, queue<uint64_t> &sendBack) {
 uintptr_t strToPtr(string str) {
     stringstream ss;
     uintptr_t ptrValue;
-    ss << hex;
-    ss << str;
+    ss << hex << str;
     ss >> ptrValue;
     return ptrValue;
 }
@@ -303,12 +302,12 @@ void api(struct vm vm, vector<string> fileArgs, string guest) {
                                     modes[file2] = modes[file];
                                     fileCopied[file2] = true;
 
-                                    //coping file to folder with private files
-                                    long cursorTemp = ftell(file);
+                                    //copying file to folder with private files
+                                    long cursorTemp = cursors[file];
                                     fseek(file, 0, SEEK_SET);
                                     char buffer[10];
                                     size_t bytesRead;
-                                    while ((bytesRead = fread(buffer, 1, 10, file)) > 0) {
+                                    while((bytesRead = fread(buffer, 1, 10, file)) > 0) {
                                         fwrite(buffer, 1, bytesRead, file2);
                                     }
                                     fseek(file, 0, cursorTemp);
@@ -353,12 +352,10 @@ void api(struct vm vm, vector<string> fileArgs, string guest) {
                                 pushFileHandleToQueue(file, sendBack);
                             } else if(args[0] == WRITE_FILE) {
                                 FILE *file = reinterpret_cast<FILE *>(strToPtr(args[4]));
-
                                 char *buffer = new char[stoi(args[2]) * stoi(args[3])];
                                 memcpy(buffer, vm.mem + strToPtr(args[1]), stoi(args[2]) * stoi(args[3]));
                                 uint64_t writeCnt = fwrite(buffer, stoi(args[2]), stoi(args[3]), file);
                                 delete[] buffer;
-                                
                                 sendBack.push(writeCnt);
                                 pushFileHandleToQueue(file, sendBack);
                             }
@@ -409,19 +406,19 @@ void vmRunner(struct vmArgs arg) {
     long pageSize;
     if(pageArg == 2) pageSize = 2 * 1024 * 1024;
     else if(pageArg == 4) pageSize = 4 * 1024;
-    if (init_vm(&vm, memorySize, pageSize)) {
+    if(init_vm(&vm, memorySize, pageSize)) {
         cout << "Failed to init the VM" << endl;
         return;
     }
 
-    if (ioctl(vm.vcpu_fd, KVM_GET_SREGS, &sregs) < 0) {
+    if(ioctl(vm.vcpu_fd, KVM_GET_SREGS, &sregs) < 0) {
         perror("KVM_GET_SREGS");
         return;
     }
 
     setup_long_mode(&vm, &sregs);
 
-    if (ioctl(vm.vcpu_fd, KVM_SET_SREGS, &sregs) < 0) {
+    if(ioctl(vm.vcpu_fd, KVM_SET_SREGS, &sregs) < 0) {
         perror("KVM_SET_SREGS");
         return;
     }
@@ -431,19 +428,19 @@ void vmRunner(struct vmArgs arg) {
     regs.rip = 0;
     regs.rsp = memorySize;
 
-    if (ioctl(vm.vcpu_fd, KVM_SET_REGS, &regs) < 0) {
+    if(ioctl(vm.vcpu_fd, KVM_SET_REGS, &regs) < 0) {
         perror("KVM_SET_REGS");
         return;
     }
 
     img.open(guestArg, ios::binary);
-    if (!img.is_open()) {
+    if(!img.is_open()) {
         cout << "Can not open binary file" << endl;
         return;
     }
 
     char *p = vm.mem;
-    while (!img.eof()) {
+    while(!img.eof()) {
         img.read(p, 1024);
         p += img.gcount();
     }
@@ -453,23 +450,23 @@ void vmRunner(struct vmArgs arg) {
 }
 
 bool parseArgs(int argc, char *argv[], int *memoryArg, int *pageArg, vector<string> &guestArgs, vector<string> &fileArgs) {
-    for (int i = 1; i < argc; ) {
-        if (strcmp(argv[i], "--memory") == 0 || strcmp(argv[i], "-m") == 0)  {
+    for(int i = 1; i < argc; ) {
+        if(strcmp(argv[i], "--memory") == 0 || strcmp(argv[i], "-m") == 0)  {
             if(strcmp(argv[i + 1], "2") && strcmp(argv[i + 1], "4") && strcmp(argv[i + 1], "8")) return false;
             *memoryArg = atoi(argv[i + 1]);
             i += 2;
-        } else if (strcmp(argv[i], "--page") == 0 || strcmp(argv[i], "-p") == 0) {
+        } else if(strcmp(argv[i], "--page") == 0 || strcmp(argv[i], "-p") == 0) {
             if(strcmp(argv[i + 1], "2") && strcmp(argv[i + 1], "4")) return false;
             *pageArg = atoi(argv[i + 1]);
             i += 2;
-        } else if (strcmp(argv[i], "--guest") == 0 || strcmp(argv[i], "-g") == 0) {
+        } else if(strcmp(argv[i], "--guest") == 0 || strcmp(argv[i], "-g") == 0) {
             i++;
             while(i < argc) {
                 if(strcmp(argv[i], "--memory") == 0 || strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--page") == 0 || strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--file") == 0 || strcmp(argv[i], "-f") == 0) break;
                 guestArgs.emplace_back(argv[i]);
                 i++;
             }
-        } else if (strcmp(argv[i], "--file") == 0 || strcmp(argv[i], "-f") == 0) {
+        } else if(strcmp(argv[i], "--file") == 0 || strcmp(argv[i], "-f") == 0) {
             i++;
             while(i < argc) {
                 if(strcmp(argv[i], "--memory") == 0 || strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--page") == 0 || strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--guest") == 0 || strcmp(argv[i], "-g") == 0) break;
@@ -484,8 +481,8 @@ bool parseArgs(int argc, char *argv[], int *memoryArg, int *pageArg, vector<stri
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 7) {
-        cout << "Run program like this ./mini_hypervisor [--memory or -m] [2, 4 or 8] [--page or -p] [2 or 4] [--guest or -g] guest1.img guest2.img guest3.img [--file or -f] file1.txt file2.txt" << endl;
+    if(argc < 7) {
+        cout << "Run program like this ./mini_hypervisor [--memory or -m] [2, 4 or 8] [--page or -p] [2 or 4] [--guest or -g] guest1/guest1.img guest2/guest2.img [--file or -f] lorem1.txt lorem2.txt" << endl;
         return 1;
     }
 
@@ -495,11 +492,19 @@ int main(int argc, char *argv[]) {
     int pageArg;
     vector<string> guestArgs;
     vector<string> fileArgs;
-    if (!parseArgs(argc, argv, &memoryArg, &pageArg, guestArgs, fileArgs)) {
-        cout << "Run program like this ./mini_hypervisor [--memory or -m] [2, 4 or 8] [--page or -p] [2 or 4] [--guest or -g] guest1.img guest2.img guest3.img [--file or -f] file1.txt file2.txt" << endl;
+    if(!parseArgs(argc, argv, &memoryArg, &pageArg, guestArgs, fileArgs)) {
+        cout << "Run program like this ./mini_hypervisor [--memory or -m] [2, 4 or 8] [--page or -p] [2 or 4] [--guest or -g] guest1/guest1.img guest2/guest2.img [--file or -f] lorem1.txt lorem2.txt" << endl;
         return 1;
     }
 
+    for(size_t i = 0; i < guestArgs.size(); i++) {
+        for(size_t j = i + 1; j < guestArgs.size(); j++) {
+            if(guestArgs[i] == guestArgs[j]) {
+                cout << "You can't run the same guest more than once" << endl;
+                return 1;
+            }
+        }
+    }
 
     struct vmArgs vmArgs;
     vmArgs.memoryArg = memoryArg;
@@ -507,12 +512,12 @@ int main(int argc, char *argv[]) {
     vmArgs.fileArgs = fileArgs;
 
     vector<thread> threads;
-    for (const auto& guestArg : guestArgs) {
+    for(const auto& guestArg : guestArgs) {
         vmArgs.guestArg = guestArg;
         threads.emplace_back(vmRunner, vmArgs);
     }
 
-    for (auto& thread : threads) {
+    for(auto& thread : threads) {
         thread.join();
     }
 

@@ -63,19 +63,19 @@ void uintToStr(unsigned int num, char *str) {
     char temp[20];
     int i = 0;
 
-    if (num == 0) {
+    if(num == 0) {
         str[0] = '0';
         str[1] = '\0';
         return;
     }
 
-    while (num > 0) {
+    while(num > 0) {
         temp[i++] = num % 10 + '0';
         num /= 10;
     }
 
     int j = 0;
-    while (i > 0) {
+    while(i > 0) {
         str[j++] = temp[--i];
     }
     str[j] = '\0';
